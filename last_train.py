@@ -87,7 +87,7 @@ def calculate_last_train(goal):
 			stations = [departure, prev_station]
 			#print(stations)
 			if stations not in used:
-				used.append(stations)
+				used.append(stations) # 枝分かれする時だけ追加すればいいんじゃない？
 				#used.append(stations[::-1])
 				#route.append([departure, prev_station])
 				#print(departure + ":::")
