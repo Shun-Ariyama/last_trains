@@ -23,7 +23,7 @@ def import_time_table():
 	path_list = path.glob("*.csv")
 	for csv in path_list:
 		df = pd.read_csv(csv, header=None, index_col=0, 
-											skiprows=9, skipfooter=1, engine="python", encoding="utf-8")
+										skiprows=9, skipfooter=1, engine="python", encoding="utf-8")
 		#print(df)
 		for row in range(len(df)):
 			for column in range(1, len(df.columns)):
@@ -68,15 +68,20 @@ def import_time_table():
 						new_value.append(elements)
 						arrive_table[df.index[station_num]] = new_value
 
+# ルート取得関数
+# スタートからゴールまでの1ルートをゴールから逆算して取得する
 def calculate_last_train(goal):
-	global one_of_routes
-	global used
+	global one_of_routes # ルート格納リスト
+	global used # 登場済駅リスト
 	prev_station = goal
+	# ルート取得ループ
 	while prev_station != start:
-		departure_list = search_stations(prev_station)
+		departure_list = search_stations(prev_station) # prev_stationの隣の駅のリストを取得
 		print(departure_list)
+		# ルート枝分かれの確認
 		if len(departure_list) > 1:
-			branch_stations.append(prev_station)
+			branch_stations.append(prev_station) # branch_stations:ルートが枝分かれする駅のリスト
+		# ほんとは1周でいいはず、、、
 		for departure in departure_list:
 		#departure = departure_list[0]
 			stations = [departure, prev_station]
