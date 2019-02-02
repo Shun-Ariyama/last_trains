@@ -10,6 +10,7 @@ sys.setrecursionlimit(10000)
 G = [{}]
 time_table = {}
 arrive_table = {}
+number_of_connections = {} # 接続路線数
 goal_stations = ["横浜"]
 start = "新宿"
 routes = []
@@ -21,7 +22,13 @@ branch_stations = []
 def import_time_table():
 	path = Path("./csv/")
 	path_list = path.glob("*.csv")
+	loaded_list = []
 	for csv in path_list:
+		flag = 0 # 接続路線判定用
+		route_name = str(csv)[:-6] # 路線名
+		if route_name not in loaded_list:
+			loaded_list.append(route_name)
+			flag = 1
 		df = pd.read_csv(csv, header=None, index_col=0, 
 										skiprows=9, skipfooter=1, engine="python", encoding="utf-8")
 		#print(df)
@@ -31,7 +38,15 @@ def import_time_table():
 					if int(df.iloc[row, column]) < 200:
 						df.iloc[row, column] = int(df.iloc[row, column]) + 2400
 
+		loaded_stations_list = [] # 同一路線で同一駅が登場した際（環状線）に重複カウントを避けるためのリスト
 		for station_num in range(len(df)):
+			# 接続路線数を増加
+			if (flag == 1) and (df.index[station_num] not in loaded_stations_list):
+				loaded_stations_list.append(df.index[station_num])
+				if df.index[station_num] in number_of_connections.keys():
+					number_of_connections[df.index[station_num]] = number_of_connections[df.index[station_num]] + 1
+				else:
+					number_of_connections[df.index[station_num]] = 1
 			if df.iloc[station_num, 0] == "発":
 				if station_num < (len(df) - 1):
 					time_list = []
@@ -73,21 +88,20 @@ def import_time_table():
 def calculate_last_train(goal):
 	global one_of_routes # ルート格納リスト
 	global used # 登場済駅リスト
-	prev_station = goal
+	prev_station = goal # 仕組み上は逆にたどるので前の駅だが、実際はゴールに近い駅
 	# ルート取得ループ
 	while prev_station != start:
 		departure_list = search_stations(prev_station) # prev_stationの隣の駅のリストを取得
 		print(departure_list)
-		# ルート枝分かれの確認
-		if len(departure_list) > 1:
-			branch_stations.append(prev_station) # branch_stations:ルートが枝分かれする駅のリスト
 		# ほんとは1周でいいはず、、、
 		for departure in departure_list:
 		#departure = departure_list[0]
 			stations = [departure, prev_station]
 			#print(stations)
 			if stations not in used:
-				used.append(stations) # 枝分かれする時だけ追加すればいいんじゃない？
+				if number_of_connections[prev_station] > 1:
+					used.append(stations)
+				#used.append(stations) # 枝分かれする時だけ追加すればいいんじゃない？
 				#used.append(stations[::-1])
 				#route.append([departure, prev_station])
 				#print(departure + ":::")
@@ -241,6 +255,8 @@ for goal in goal_stations:
 	calculate_last_train(goal)
 	routes.append(one_of_routes)
 	print(one_of_routes)
+	print(used)
+	break
 	print_routes(routes)
 	branch_stations = double_check(branch_stations)
 	one_of_routes = []
