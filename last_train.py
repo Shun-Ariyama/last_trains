@@ -105,16 +105,29 @@ def calculate_last_train(goal):
 				used.append([prev_station, departure])
 				if calculate_last_train(departure):
 					one_of_routes.append([departure, prev_station])
-					return prev_station
+					return True
+			else:
+				flag = 0
+				for route in routes:
+					if stations in route:
+						flag = 1
+						remaining = route[:route.index(stations)]
+						break
+				if flag:
+					remaining.append(stations)
+					one_of_routes = remaining
+					print("::::::")
+					print("::")
+					#return False
 		# どの隣の駅を選んでもゴールに着かなければルート誤り
 		else:
-			if len(one_of_routes) > 0:
-				delete = one_of_routes.pop(-1)
-				if delete in used:
-					used.remove(delete)
+			# if len(one_of_routes) > 0:
+			# 	delete = one_of_routes.pop(-1)
+			# 	if delete in used:
+			# 		used.remove(delete)
 			return False
 	else:
-		return prev_station
+		return True
 
 # 分岐する駅を基準に別ルートを取得する
 # branch_stations: 分岐駅のリスト
@@ -134,8 +147,9 @@ def another_route(branch_stations):
 				if node[1] == branch_station:
 					elements_of_another_route.append(route[-i:][::-1])
 		# 分岐駅からゴールまでの区間を取得
-		calculate_last_train(branch_station)
-		print(one_of_routes)
+		for i in range(len(search_stations(branch_station))-1):
+			calculate_last_train(branch_station)
+			print(one_of_routes)
 		for i, beginning_node in enumerate(one_of_routes):
 			if beginning_node[0] == branch_station:
 				beginning_of_section = i
