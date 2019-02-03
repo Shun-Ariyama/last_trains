@@ -11,7 +11,7 @@ G = [{}]
 time_table = {}
 arrive_table = {}
 number_of_connections = {} # 接続路線数
-goal_stations = ["横浜", "品川"]
+goal_stations = ["横浜", "品川", "立川"]
 start = "新宿"
 routes = []
 one_of_routes = []
@@ -60,7 +60,12 @@ def import_time_table():
 					time_list.reverse()
 					elements = [df.index[station_num+1], time_list]
 					if df.index[station_num] in time_table.keys():
+						#print(df.index[station_num])
 						new_value = time_table[df.index[station_num]]
+						for value in new_value:
+							if value[0] == elements[0]:
+								elements = [value[0], value[1]+elements[1]]
+								time_table[df.index[station_num]].remove(value)
 						new_value.append(elements)
 						time_table[df.index[station_num]] = new_value
 					else:
@@ -82,6 +87,9 @@ def import_time_table():
 						new_value = []
 						new_value.append(elements)
 						arrive_table[df.index[station_num]] = new_value
+	for table in time_table.values():
+		for st in table:
+			st[1].sort(key=lambda x: x[0], reverse=True)
 
 # ルート取得関数
 # スタートからゴールまでの1ルートをゴールから逆算して取得する
@@ -159,10 +167,14 @@ def another_route(goal, branch_stations):
 				#print(one_of_routes)
 				add_route = copy.copy(one_of_routes)
 				if add_route[-1][1] != goal:
+					#print(add_route, goal)
 					elements_of_another_route = before_joining(add_route, branch_station)
 					for element in elements_of_another_route:
 						if element[0][0] != start:
 							add_route = after_joining(element, element[0][0])
+						else:
+							add_route = element
+						#print(add_route)
 						routes.append(add_route)
 						#print(add_route)
 				else:
@@ -230,7 +242,6 @@ def after_joining(route_list, station):
 
 def double_check(branch_stations):
 	copy_branch_stations = copy.copy(branch_stations)
-	print(copy_branch_stations)
 	for branch_station in copy_branch_stations:
 		departure_list = search_stations(branch_station)
 		for departure in departure_list:
@@ -248,8 +259,10 @@ def search_stations(arrival):
 	return departure_list
 
 def calculate_route(departure, arrival, arrival_time):
+	#print(departure, arrival, arrival_time)
 	for dep_station in time_table[departure]:
 		if dep_station[0] == arrival:
+			#print(time_table[departure])
 			for departure_time in dep_station[1]:
 				if departure_time[0] + departure_time[1] <= arrival_time:
 					return departure_time[0]
@@ -303,7 +316,8 @@ for goal in goal_stations:
 	#branch_stations = double_check(branch_stations)
 	one_of_routes = []
 	another_route(goal, branch_stations)
-	#print(routes)
+	# for route in routes:
+	# 	print(route)
 	print_routes(routes)
 	routes = []
 	used = []
