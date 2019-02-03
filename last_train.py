@@ -11,7 +11,7 @@ G = [{}]
 time_table = {}
 arrive_table = {}
 number_of_connections = {} # 接続路線数
-goal_stations = ["横浜"]
+goal_stations = ["横浜", "品川"]
 start = "新宿"
 routes = []
 one_of_routes = []
@@ -92,35 +92,51 @@ def calculate_last_train(goal):
 	# ルート取得ループ
 	while prev_station != start:
 		departure_list = search_stations(prev_station) # prev_stationの隣の駅のリストを取得
-		print(departure_list)
+		#print(departure_list)
 		# ほんとは1周でいいはず、、、
 		for departure in departure_list:
 		#departure = departure_list[0]
 			stations = [departure, prev_station]
 			#print(stations)
 			if stations not in used:
+				# 分岐駅ではどの分岐に入ったかをusedに記録
 				if number_of_connections[prev_station] > 1:
 					branch_stations.append(prev_station)
 					used.append(stations)
 				used.append([prev_station, departure])
+				# 既存のルートに接続したら終了
+				for route in routes:
+					for node in route:
+						if node[1] == departure:
+							one_of_routes.append([departure, prev_station])
+							return True
+				# ゴールにたどり着けばTrueが返ってくる
 				if calculate_last_train(departure):
 					one_of_routes.append([departure, prev_station])
 					return True
-			else:
-				flag = 0
-				for route in routes:
-					if stations in route:
-						flag = 1
-						remaining = route[:route.index(stations)]
-						break
-				if flag:
-					remaining.append(stations)
-					one_of_routes = remaining
-					print("::::::")
-					print("::")
+			# else:
+			# 	flag = 0
+			# 	for route in routes:
+			# 		if stations in route and len(one_of_routes) > 0:
+			# 			flag = 1
+			# 			remaining = route[:route.index(stations)]
+			# 			print("a")
+			# 			break
+			# 	if flag:
+			# 		remaining.append(stations)
+			# 		one_of_routes = remaining
+			# 		prev_station = start
+			# 		print("::::::")
+			# 		print("::")
+			# 		break
 					#return False
 		# どの隣の駅を選んでもゴールに着かなければルート誤り
 		else:
+			# for route in routes:
+			# 	for dep in departure_list:
+			# 		if [dep, prev_station] in route:
+			# 			print("a")
+			# 			return True
 			# if len(one_of_routes) > 0:
 			# 	delete = one_of_routes.pop(-1)
 			# 	if delete in used:
@@ -131,66 +147,86 @@ def calculate_last_train(goal):
 
 # 分岐する駅を基準に別ルートを取得する
 # branch_stations: 分岐駅のリスト
-def another_route(branch_stations):
+def another_route(goal, branch_stations):
 	global one_of_routes # 既に取得した1ルート
 
 	for branch_station in branch_stations:
-		elements_of_another_route = [] # 分岐駅までのルートを格納するリスト
+		# elements_of_another_route = [] # 分岐駅までのルートを格納するリスト
 		#print(routes)
-		# 全てのルートで分岐駅までのルート取得
-		for route in routes:
-			#route.reverse()
-			# 分岐駅までのルートをelements_of_another_routeに追加
-			# node:[出発駅, 到着駅]
-			for i, node in enumerate(reversed(route)):
-				# スタートから分岐駅に到着する区間までを取得
-				if node[1] == branch_station:
-					elements_of_another_route.append(route[-i:][::-1])
 		# 分岐駅からゴールまでの区間を取得
 		for i in range(len(search_stations(branch_station))-1):
-			calculate_last_train(branch_station)
-			print(one_of_routes)
-		for i, beginning_node in enumerate(one_of_routes):
-			if beginning_node[0] == branch_station:
-				beginning_of_section = i
-				for end_node in range(beginning_of_section+1, len(one_of_routes)):
-					for route in routes:
-						for node_in_route in route:
-							if (one_of_routes[end_node][0] == node_in_route[0]) and (one_of_routes[end_node][0] != branch_station):
-								print(one_of_routes[end_node][0], node_in_route[0])
-								end_of_section = end_node
-								print(beginning_of_section, end_of_section)
-								break
-							elif one_of_routes[end_node][1] == branch_station:
-								break
-						else:
-							continue
-						break
-					else:
-						continue
-					break
+			if calculate_last_train(branch_station):
+				#print(one_of_routes)
+				add_route = copy.copy(one_of_routes)
+				if add_route[-1][1] != goal:
+					elements_of_another_route = before_joining(add_route, branch_station)
+					for element in elements_of_another_route:
+						if element[0][0] != start:
+							add_route = after_joining(element, element[0][0])
+						routes.append(add_route)
+						#print(add_route)
 				else:
-					continue
-		one_of_routes = one_of_routes[beginning_of_section:end_of_section]
-		print(one_of_routes)
-		after_joining(one_of_routes[-1][1])
+					elements_of_another_route = add_route
+					if elements_of_another_route[0][0] != start:
+						add_route = after_joining(elements_of_another_route, elements_of_another_route[0][0])
+					routes.append(add_route)
+					#print(add_route)
+				one_of_routes = []
+		# for i, beginning_node in enumerate(one_of_routes):
+		# 	if beginning_node[0] == branch_station:
+		# 		beginning_of_section = i
+		# 		for end_node in range(beginning_of_section+1, len(one_of_routes)):
+		# 			for route in routes:
+		# 				for node_in_route in route:
+		# 					if (one_of_routes[end_node][0] == node_in_route[0]) and (one_of_routes[end_node][0] != branch_station):
+		# 						print(one_of_routes[end_node][0], node_in_route[0])
+		# 						end_of_section = end_node
+		# 						print(beginning_of_section, end_of_section)
+		# 						break
+		# 					elif one_of_routes[end_node][1] == branch_station:
+		# 						break
+		# 				else:
+		# 					continue
+		# 				break
+		# 			else:
+		# 				continue
+		# 			break
+		# 		else:
+		# 			continue
+		# one_of_routes = one_of_routes[beginning_of_section:end_of_section]
+		# print(one_of_routes)
+		# after_joining(one_of_routes[-1][1])
 		#print(routes)
-		break
+		#break
+
+def before_joining(route_list, branch_station):
+	elements_of_another_route = []
+	for route in routes:
+		#route.reverse()
+		# 分岐駅までのルートをelements_of_another_routeに追加
+		# node:[出発駅, 到着駅]
+		for i, node in enumerate(reversed(route)):
+			# スタートから分岐駅に到着する区間までを取得
+			if node[1] == branch_station:
+				elements_of_another_route.append(route_list + route[-i:])
+	#print(elements_of_another_route)
+	return elements_of_another_route
 
 # 分岐したルートが再合流してからのルートを取得
 # [a, b]のaがstationと一致したところからゴールまでをルートに追加する
-def after_joining(station):
-	additional_routes = copy.copy(one_of_routes)
+def after_joining(route_list, station):
+	additional_routes = []
+	copy_route_list = copy.copy(route_list)
 	#additional_routes.reverse()
-	print(routes)
 	for route in routes:
 		rev_route = route[::-1]
 		for i, node in enumerate(route):
 			if node[0] == station:
-				additional_routes.extend(route[:i])
+				additional_routes = route[:i]
 				break
+	additional_routes.extend(copy_route_list)
 	#additional_routes.reverse()
-	print(additional_routes)
+	return additional_routes
 
 def double_check(branch_stations):
 	copy_branch_stations = copy.copy(branch_stations)
@@ -261,14 +297,14 @@ for goal in goal_stations:
 	last_arrive = 2600
 	calculate_last_train(goal)
 	routes.append(one_of_routes)
-	print(one_of_routes)
-	print(used)
-	print_routes(routes)
+	#print(one_of_routes)
+	#print(used)
+	#print_routes(routes)
 	#branch_stations = double_check(branch_stations)
 	one_of_routes = []
-	another_route(branch_stations)
-	print(one_of_routes)
-	print("\n")
+	another_route(goal, branch_stations)
+	#print(routes)
+	print_routes(routes)
 	routes = []
 	used = []
 
