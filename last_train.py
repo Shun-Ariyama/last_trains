@@ -277,6 +277,8 @@ def convert_time(original_time):
 		time = original_time
 	return time
 
+# よくわかんないやついらない？→いらない。
+# ここに来たroutesはもうスタートからゴールまできれいに並んでいる
 def print_routes(routes):
 	for leaf in range(1, len(routes)):
 		for root in range(leaf-1, -1, -1):
@@ -318,7 +320,7 @@ for goal in goal_stations:
 	another_route(goal, branch_stations)
 	# for route in routes:
 	# 	print(route)
-	print_routes(routes)
+	calculate_time(routes)
 	routes = []
 	used = []
 
