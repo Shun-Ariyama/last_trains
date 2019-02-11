@@ -11,7 +11,7 @@ G = [{}]
 time_table = {}
 arrive_table = {}
 number_of_connections = {} # 接続路線数
-goal_stations = ["横浜", "品川", "立川"]
+goal_stations = ["横浜", "品川", "立川", "熱海"]
 start = "新宿"
 routes = []
 one_of_routes = []
@@ -43,10 +43,10 @@ def import_time_table():
 			# 接続路線数を増加
 			if (flag == 1) and (df.index[station_num] not in loaded_stations_list):
 				loaded_stations_list.append(df.index[station_num])
-				if df.index[station_num] in number_of_connections.keys():
-					number_of_connections[df.index[station_num]] = number_of_connections[df.index[station_num]] + 1
-				else:
-					number_of_connections[df.index[station_num]] = 1
+				# if df.index[station_num] in number_of_connections.keys():
+				# 	number_of_connections[df.index[station_num]] = number_of_connections[df.index[station_num]] + 1
+				# else:
+				# 	number_of_connections[df.index[station_num]] = 1
 			if df.iloc[station_num, 0] == "発":
 				if station_num < (len(df) - 1):
 					time_list = []
@@ -66,9 +66,13 @@ def import_time_table():
 							if value[0] == elements[0]:
 								elements = [value[0], value[1]+elements[1]]
 								time_table[df.index[station_num]].remove(value)
+								break
+						else:
+							number_of_connections[df.index[station_num]] = number_of_connections[df.index[station_num]] + 1
 						new_value.append(elements)
 						time_table[df.index[station_num]] = new_value
 					else:
+						number_of_connections[df.index[station_num]] = 1
 						new_value = []
 						new_value.append(elements)
 						time_table[df.index[station_num]] = new_value
@@ -109,7 +113,8 @@ def calculate_last_train(goal):
 			if stations not in used:
 				# 分岐駅ではどの分岐に入ったかをusedに記録
 				if number_of_connections[prev_station] > 1:
-					branch_stations.append(prev_station)
+					if prev_station not in branch_stations:
+						branch_stations.append(prev_station)
 					used.append(stations)
 				used.append([prev_station, departure])
 				# 既存のルートに接続したら終了
@@ -122,33 +127,8 @@ def calculate_last_train(goal):
 				if calculate_last_train(departure):
 					one_of_routes.append([departure, prev_station])
 					return True
-			# else:
-			# 	flag = 0
-			# 	for route in routes:
-			# 		if stations in route and len(one_of_routes) > 0:
-			# 			flag = 1
-			# 			remaining = route[:route.index(stations)]
-			# 			print("a")
-			# 			break
-			# 	if flag:
-			# 		remaining.append(stations)
-			# 		one_of_routes = remaining
-			# 		prev_station = start
-			# 		print("::::::")
-			# 		print("::")
-			# 		break
-					#return False
 		# どの隣の駅を選んでもゴールに着かなければルート誤り
 		else:
-			# for route in routes:
-			# 	for dep in departure_list:
-			# 		if [dep, prev_station] in route:
-			# 			print("a")
-			# 			return True
-			# if len(one_of_routes) > 0:
-			# 	delete = one_of_routes.pop(-1)
-			# 	if delete in used:
-			# 		used.remove(delete)
 			return False
 	else:
 		return True
@@ -159,8 +139,8 @@ def another_route(goal, branch_stations):
 	global one_of_routes # 既に取得した1ルート
 
 	for branch_station in branch_stations:
+		#print(branch_station)
 		# elements_of_another_route = [] # 分岐駅までのルートを格納するリスト
-		#print(routes)
 		# 分岐駅からゴールまでの区間を取得
 		for i in range(len(search_stations(branch_station))-1):
 			if calculate_last_train(branch_station):
@@ -184,32 +164,6 @@ def another_route(goal, branch_stations):
 					routes.append(add_route)
 					#print(add_route)
 				one_of_routes = []
-		# for i, beginning_node in enumerate(one_of_routes):
-		# 	if beginning_node[0] == branch_station:
-		# 		beginning_of_section = i
-		# 		for end_node in range(beginning_of_section+1, len(one_of_routes)):
-		# 			for route in routes:
-		# 				for node_in_route in route:
-		# 					if (one_of_routes[end_node][0] == node_in_route[0]) and (one_of_routes[end_node][0] != branch_station):
-		# 						print(one_of_routes[end_node][0], node_in_route[0])
-		# 						end_of_section = end_node
-		# 						print(beginning_of_section, end_of_section)
-		# 						break
-		# 					elif one_of_routes[end_node][1] == branch_station:
-		# 						break
-		# 				else:
-		# 					continue
-		# 				break
-		# 			else:
-		# 				continue
-		# 			break
-		# 		else:
-		# 			continue
-		# one_of_routes = one_of_routes[beginning_of_section:end_of_section]
-		# print(one_of_routes)
-		# after_joining(one_of_routes[-1][1])
-		#print(routes)
-		#break
 
 def before_joining(route_list, branch_station):
 	elements_of_another_route = []
@@ -263,9 +217,11 @@ def calculate_route(departure, arrival, arrival_time):
 	for dep_station in time_table[departure]:
 		if dep_station[0] == arrival:
 			#print(time_table[departure])
+			#print(dep_station[1])
 			for departure_time in dep_station[1]:
-				if departure_time[0] + departure_time[1] <= arrival_time:
-					return departure_time[0]
+				if departure_time[0] is not None:
+					if departure_time[0] + departure_time[1] <= arrival_time:
+						return departure_time[0]
 	return None
 
 # 時間変換関数
@@ -279,17 +235,17 @@ def convert_time(original_time):
 
 # よくわかんないやついらない？→いらない。
 # ここに来たroutesはもうスタートからゴールまできれいに並んでいる
-def print_routes(routes):
-	for leaf in range(1, len(routes)):
-		for root in range(leaf-1, -1, -1):
-			for i, node in enumerate(routes[root]):
-				if routes[leaf][-1][1] == node[0]:
-					add = routes[root][i:]
-					one_of_routes = routes[leaf]
-					for ad in add:
-						one_of_routes.append(ad)
-					routes[leaf] = one_of_routes
-	calculate_time(routes)
+# def print_routes(routes):
+# 	for leaf in range(1, len(routes)):
+# 		for root in range(leaf-1, -1, -1):
+# 			for i, node in enumerate(routes[root]):
+# 				if routes[leaf][-1][1] == node[0]:
+# 					add = routes[root][i:]
+# 					one_of_routes = routes[leaf]
+# 					for ad in add:
+# 						one_of_routes.append(ad)
+# 					routes[leaf] = one_of_routes
+# 	calculate_time(routes)
 
 def calculate_time(routes):
 	for route in routes:
@@ -301,9 +257,56 @@ def calculate_time(routes):
 		for node in route[::-1]:
 			departure_time = calculate_route(node[0], node[1], departure_time)
 			time_list.append([node[0], departure_time])
-		for i in time_list:
-			print(i)
-		print("\n")
+			if departure_time is None:
+				# for i in time_list:
+				# 	print(i)
+				# print("\n")
+				time_list.clear()
+				break
+		if len(time_list) > 0:
+			for i in time_list:
+				print(i)
+			print("\n")
+
+# ルート内の重複区間を削除
+def delete_duplication(routes):
+	for num, route in enumerate(routes):
+		#del_list = []
+		while(not is_unique(route)):
+			copy_route = copy.copy(route)
+			del_node_list = []
+			for i, node in enumerate(copy_route):
+				start = node[0]
+				num_start = i
+				if num_start + 1 <= len(copy_route):
+					for end_node in range(num_start+1, len(copy_route)):
+						if start == copy_route[end_node][1]:
+							del_node_list.extend(copy_route[num_start:end_node+1])
+							#del_list.append([num_start, end_node+1])
+			del_node_list_unique = get_unique_list(del_node_list)
+			#print(del_node_list_unique)
+			#print(route)
+			for del_node in del_node_list_unique:
+				#print(del_node)
+				route.remove(del_node)
+			#print(route)
+		#copy_routes[num] = copy_route
+	#print(routes)
+	copy_routes = copy.copy(routes)
+	for num in range(len(copy_routes)-1):
+		for m in range(num+1, len(copy_routes)):
+			if copy_routes[num] == copy_routes[m]:
+				routes.remove(copy_routes[m])
+				break
+
+def get_unique_list(seq):
+	seen = []
+	return [x for x in seq if x not in seen and not seen.append(x)]
+
+def is_unique(seq):
+	seen = []
+	unique_list = [x for x in seq if x not in seen and not seen.append(x)]
+	return len(seq) == len(unique_list)
 
 import_time_table()
 #print(time_table)
@@ -316,11 +319,17 @@ for goal in goal_stations:
 	#print(used)
 	#print_routes(routes)
 	#branch_stations = double_check(branch_stations)
+	#print(branch_stations)
+	#print(number_of_connections)
 	one_of_routes = []
 	another_route(goal, branch_stations)
-	# for route in routes:
-	# 	print(route)
+	#for route in routes:
+	#	print(route)
+	#delete_duplication(routes)
 	calculate_time(routes)
+	#for route in routes:
+	#	print(route)
 	routes = []
 	used = []
+	branch_stations.clear()
 
