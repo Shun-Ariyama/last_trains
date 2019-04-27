@@ -11,12 +11,14 @@ G = [{}]
 time_table = {}
 arrive_table = {}
 number_of_connections = {} # 接続路線数
-goal_stations = ["横浜", "品川", "立川", "熱海"]
+goal_stations = ["横浜", "品川", "立川", "取手"]
 start = "新宿"
 routes = []
 one_of_routes = []
 used = []
 branch_stations = []
+arrive_list = []
+cut_off_time = 0
 
 # 時刻表ファイル読み込み関数
 def import_time_table():
@@ -85,6 +87,13 @@ def import_time_table():
 					elements = [df.index[station_num-1], arrive_time]
 					if df.index[station_num] in arrive_table.keys():
 						new_value = arrive_table[df.index[station_num]]
+						for i, sta in enumerate(arrive_table[df.index[station_num]]):
+							if sta[0] == elements[0]:
+								del new_value[i]
+								new_time_list = sta[1]
+								new_time_list.extend(elements[1])
+								new_time_list.sort()
+								elements = [df.index[station_num-1], new_time_list]
 						new_value.append(elements)
 						arrive_table[df.index[station_num]] = new_value
 					else:
@@ -101,6 +110,9 @@ def calculate_last_train(goal):
 	global one_of_routes # ルート格納リスト
 	global used # 登場済駅リスト
 	prev_station = goal # 仕組み上は逆にたどるので前の駅だが、実際はゴールに近い駅
+#	if len(one_of_routes) > 50:
+#		print("a")
+#		return False
 	# ルート取得ループ
 	while prev_station != start:
 		departure_list = search_stations(prev_station) # prev_stationの隣の駅のリストを取得
@@ -110,7 +122,9 @@ def calculate_last_train(goal):
 		#departure = departure_list[0]
 			stations = [departure, prev_station]
 			#print(stations)
-			if stations not in used:
+			if (stations not in used) and (departure not in arrive_list):
+				arrive_list.append(prev_station)
+				#print(stations)
 				# 分岐駅ではどの分岐に入ったかをusedに記録
 				if number_of_connections[prev_station] > 1:
 					if prev_station not in branch_stations:
@@ -127,6 +141,8 @@ def calculate_last_train(goal):
 				if calculate_last_train(departure):
 					one_of_routes.append([departure, prev_station])
 					return True
+				else:
+					del arrive_list[-1]
 		# どの隣の駅を選んでもゴールに着かなければルート誤り
 		else:
 			return False
@@ -137,12 +153,16 @@ def calculate_last_train(goal):
 # branch_stations: 分岐駅のリスト
 def another_route(goal, branch_stations):
 	global one_of_routes # 既に取得した1ルート
+	global arrive_list
 
 	for branch_station in branch_stations:
 		#print(branch_station)
 		# elements_of_another_route = [] # 分岐駅までのルートを格納するリスト
 		# 分岐駅からゴールまでの区間を取得
 		for i in range(len(search_stations(branch_station))-1):
+			arrive_list = []
+			for j in one_of_routes:
+				arrive_list.append(j[1])
 			if calculate_last_train(branch_station):
 				#print(one_of_routes)
 				add_route = copy.copy(one_of_routes)
@@ -220,7 +240,7 @@ def calculate_route(departure, arrival, arrival_time):
 			#print(dep_station[1])
 			for departure_time in dep_station[1]:
 				if departure_time[0] is not None:
-					if departure_time[0] + departure_time[1] <= arrival_time:
+					if convert_time(departure_time[0] + departure_time[1]) <= arrival_time:
 						return departure_time[0]
 	return None
 
@@ -332,4 +352,3 @@ for goal in goal_stations:
 	routes = []
 	used = []
 	branch_stations.clear()
-
